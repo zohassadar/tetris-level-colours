@@ -2,8 +2,6 @@ import React, { useState } from 'react';
 import { render } from 'react-dom';
 import { colorTable, lookup } from './colors';
 
-// use meatfighter for colour format
-
 function findOffset(rom) {
     return rom.findIndex((_, i, a) => {
         return a.slice(i, i + 7).every((d, i) => d === colorTable[i]);
@@ -18,28 +16,13 @@ while (lookupClone.length) {
 
 function genie(address, value) {
     const code = [];
-
     code[0] = (value & 7) + ((value >> 4) & 8);
     code[1] = ((value >> 4) & 7) + ((address >> 4) & 8);
     code[2] = (address >> 4) & 7;
     code[3] = (address >> 12) + (address & 8);
     code[4] = (address & 7) + ((address >> 8) & 8);
     code[5] = (address >> 8) & 7;
-
-    // if (key === undefined) {
     code[5] += value & 8;
-    // if (wantskey) code[2] += 8;
-    // } else {
-    // code[2] += 8;
-    // code[5] += key & 8;
-    // code[6] = (key & 7) + ((key >> 4) & 8);
-    // code[7] = ((key >> 4) & 7) + (value & 8);
-    // }
-    // console.log(
-    //     code,
-    //     code.map((d) => 'APZLGITYEOXUKSVN'[d]),
-    // );
-
     return code.map((d) => 'APZLGITYEOXUKSVN'[d]).join('');
 }
 
