@@ -1,0 +1,18 @@
+{
+    "scripts": {
+        "watch": "webpack -w --env.dev",
+        "deploy": "webpack -p"
+    },
+    "devDependencies": {
+        "@babel/core": "^7.0.0",
+        "@babel/preset-env": "^7.0.0",
+        "@babel/preset-react": "^7.0.0",
+        "babel-loader": "^8.0.0",
+        "webpack": "^4.20.0",
+        "webpack-cli": "^3.1.1"
+    },
+    "dependencies": {
+        "react": "^16.8.0",
+        "react-dom": "^16.8.0"
+    }
+}
