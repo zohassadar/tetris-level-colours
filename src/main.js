@@ -1,15 +1,8 @@
 import React, { useState } from 'react';
 import { render } from 'react-dom';
+import { colorTable, lookup } from './colors';
 
-const colorTable = [
-    0x0f, 0x30, 0x21, 0x12, 0x0f, 0x30, 0x29, 0x1a, 0x0f, 0x30, 0x24, 0x14,
-    0x0f, 0x30, 0x2a, 0x12, 0x0f, 0x30, 0x2b, 0x15, 0x0f, 0x30, 0x22, 0x2b,
-    0x0f, 0x30, 0x00, 0x16, 0x0f, 0x30, 0x05, 0x13, 0x0f, 0x30, 0x16, 0x12,
-    0x0f, 0x30, 0x27, 0x16,
-];
-
-// use meatfighter
-
+// use meatfighter for colour format
 
 function findOffset(rom) {
     return rom.findIndex((_, i, a) => {
@@ -17,12 +10,15 @@ function findOffset(rom) {
     });
 }
 
+// make lookup table for hex to colours
+// level dropdown with 3 colours
+
 function LevelColours() {
     const [offset, setOffset] = useState(0x984c);
 
     return (
         <main>
-            <h1>Universal ROM Level Colour GG Code Generator</h1>
+            <h1>Universal Tetris ROM Colour Generator</h1>
             <p>
                 colour table offset: <strong>0x{offset.toString(16)}</strong>
                 {' '}
@@ -43,6 +39,9 @@ function LevelColours() {
                     };
                     e.preventDefault();
                 }} />
+            </p>
+            <p>
+
             </p>
         </main>
     );
