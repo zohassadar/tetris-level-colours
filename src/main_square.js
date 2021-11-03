@@ -5,7 +5,7 @@ const orientationTable = [0x00,0x7B,0xFF,0x00,0x7B,0x00,0x00,0x7B,0x01,0xFF,0x7B
 
 function findOffset(rom) {
     return rom.findIndex((_, i, a) => {
-        return a.slice(i, i + 7).every((d, i) => d === orientationTable[i]);
+        return a.slice(i, i + orientationTable.length).every((d, i) => d === orientationTable[i]);
     });
 }
 

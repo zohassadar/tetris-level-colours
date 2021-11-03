@@ -4,7 +4,7 @@ import { colorTable, lookup } from './colors';
 
 function findOffset(rom) {
     return rom.findIndex((_, i, a) => {
-        return a.slice(i, i + 7).every((d, i) => d === colorTable[i]);
+        return a.slice(i, i + colorTable.length).every((d, i) => d === colorTable[i]);
     });
 }
 
