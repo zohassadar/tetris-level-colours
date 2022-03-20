@@ -7,6 +7,8 @@ module.exports = (env={}, args={}) => {
         mode: env.dev ? 'development' : 'production',
         entry : {
             main: './src/main.js',
+            square: './src/square.js',
+            noflash: './src/noflash.js',
         },
         output: {
             path:     path.join(__dirname, 'static'),
