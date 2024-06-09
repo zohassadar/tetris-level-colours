@@ -4,7 +4,9 @@ import { colorTable, lookup } from './colors';
 
 function findOffset(rom) {
     return rom.findIndex((_, i, a) => {
-        return a.slice(i, i + colorTable.length).every((d, i) => d === colorTable[i]);
+        return a
+            .slice(i, i + colorTable.length)
+            .every((d, i) => d === colorTable[i]);
     });
 }
 
@@ -28,10 +30,11 @@ function genie(address, value) {
 
 function LevelColours() {
     const [offset, setOffset] = useState(0x984c);
-    const [level, setLevel] = useState(18);
+    const [level, setLevel] = useState(0);
     const levelOffset = (level % 10) * 4;
     const [color, setColor] = useState(0);
     const [chosen, setChosen] = useState(undefined);
+    const [newTable, setNewTable] = useState(colorTable.slice());
 
     let colorIndex = 0;
 
@@ -65,6 +68,7 @@ function LevelColours() {
                     }}
                 />
             </p>
+            {/*
             <select value={level} onChange={(e) => setLevel(e.target.value)}>
                 {Array.from({ length: 30 }, (_, i) => (
                     <option key={i} value={i}>
@@ -72,20 +76,26 @@ function LevelColours() {
                     </option>
                 ))}
             </select>
-            <p>
-                {Array.from({ length: 3 }, (_, i) => (
-                    <button
-                        key={i}
-                        style={{
-                            backgroundColor:
-                                lookup[colorTable[levelOffset + i + 1]],
-                        }}
-                        onClick={() => setColor(i + 1)}
-                    >
-                        &nbsp;
-                    </button>
-                ))}
-            </p>
+            */}
+            {Array.from({ length: 10 }, (_, l) => (
+                <p key={l}>
+                    {Array.from({ length: 3 }, (_, i) => (
+                        <button
+                            key={i}
+                            style={{
+                                backgroundColor:
+                                    lookup[newTable[l * 4 + i + 1]],
+                            }}
+                            onClick={() => {
+                                setLevel(l);
+                                setColor(i + 1);
+                            }}
+                        >
+                            &nbsp;
+                        </button>
+                    ))}
+                </p>
+            ))}
             {!!color && (
                 <p>
                     choose colour for level: <strong>{level}</strong> colour:{' '}
@@ -100,9 +110,20 @@ function LevelColours() {
                                 style={{ backgroundColor: hex }}
                                 key={i}
                                 data-index={colorIndex}
-                                onClick={(e) =>
-                                    setChosen(Number(e.target.dataset.index))
-                                }
+                                onClick={(e) => {
+                                    console.log(
+                                        `${level} ${color} ${
+                                            level * 4 + color
+                                        }`,
+                                    );
+                                    const newNewTable = newTable.slice();
+                                    const newChosen = Number(
+                                        e.target.dataset.index,
+                                    );
+                                    newNewTable[level * 4 + color] = newChosen;
+                                    setNewTable(newNewTable);
+                                    setChosen(newChosen);
+                                }}
                             >
                                 {(colorIndex++)
                                     .toString(16)
