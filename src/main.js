@@ -1,12 +1,17 @@
 import React, { useState } from 'react';
 import { render } from 'react-dom';
-import { colorTable, lookup } from './colors';
+import { saveAs } from './saveas.js';
+import {
+    vanillaTable,
+    gym6Table1,
+    gym6Table2,
+    gym6Table3,
+    lookup,
+} from './colors';
 
-function findOffset(rom) {
+function findOffset(table, rom) {
     return rom.findIndex((_, i, a) => {
-        return a
-            .slice(i, i + colorTable.length)
-            .every((d, i) => d === colorTable[i]);
+        return a.slice(i, i + table.length).every((d, i) => d === table[i]);
     });
 }
 
@@ -27,14 +32,121 @@ function genie(address, value) {
     code[5] += value & 8;
     return code.map((d) => 'APZLGITYEOXUKSVN'[d]).join('');
 }
+function getType(e, setType) {
+    e.preventDefault();
+    const reader = new FileReader();
+    reader.readAsArrayBuffer(e.target.files[0]);
+    reader.onloadend = () => {
+        const rom = [...new Uint8Array(reader.result)];
+        const offset = findOffset(vanillaTable, rom.slice(0x10));
+        if (offset !== -1) {
+            setType(new VanillaType(offset + 0x8000));
+            return;
+        }
+
+        const offset1 = findOffset(gym6Table1, rom.slice(0x10)) + 0x8000;
+        const offset2 = findOffset(gym6Table2, rom.slice(0x10)) + 0x8000;
+        const offset3 = findOffset(gym6Table3, rom.slice(0x10)) + 0x8000;
+        if (offset1 !== 0x7fff && offset2 !== 0x7fff && offset3 !== 0x7fff) {
+            setType(new Gym6Type(offset1, offset2, offset3));
+            return;
+        }
+
+        alert('ROM doesnt contain original colour data');
+    };
+}
+function getIPS(segments) {
+    let buffer = [];
+    const sendWord = (word) =>
+        buffer.push(
+            ...[...Array(word.length).keys()].map((i) => word.charCodeAt(i)),
+        );
+
+    sendWord('PATCH');
+    for (const [offset, table] of segments) {
+        console.log(`${offset.toString(16)} ${JSON.stringify(table)}`);
+        const converted = offset - 0x7ff0;
+        buffer.push(0);
+        buffer.push(converted >> 8);
+        buffer.push(converted & 0xff);
+        buffer.push(0);
+        buffer.push(table.length);
+        buffer.push(...table);
+    }
+    sendWord('EOF');
+    saveAs(new Blob([new Uint8Array(buffer)]), 'colours.ips');
+}
+function VanillaType(offset) {
+    this.offset = offset;
+
+    this.getGgCode = function (level, color, chosen) {
+        return genie(this.offset + level * 4 + color - 0x8000, chosen);
+    };
+
+    this.getPatch = function (table) {
+        getIPS([[this.offset, table]]);
+    };
+    this.getOffset = function (level, color) {
+        return (this.offset + level * 4 + color).toString(16);
+    };
+    this.getInfo = function () {
+        return (
+            <>
+                {this.offset == 0x984c ? 'vanilla' : 'shifted'}{' '}
+                table offset: <strong>0x{this.offset.toString(16)}</strong>{' '}
+            </>
+        );
+    };
+}
+
+function Gym6Type(offset1, offset2, offset3) {
+    this.offsets = [null, offset1, offset2, offset3];
+
+    this.getGgCode = function (level, color, chosen) {
+        return genie(this.offsets[color] + level - 0x8000, chosen);
+    };
+
+    this.getPatch = function (table) {
+        let table1 = [];
+        let table2 = [];
+        let table3 = [];
+        for (let i = 0; i < table.length; i += 4) {
+            table1.push(table[i + 1]);
+            table2.push(table[i + 2]);
+            table3.push(table[i + 3]);
+        }
+        getIPS([
+            [this.offsets[1], table1],
+            [this.offsets[2], table2],
+            [this.offsets[3], table3],
+        ]);
+    };
+
+    this.getOffset = function (level, color) {
+        return (this.offsets[color] + level).toString(16);
+    };
+    this.getInfo = function () {
+        return (
+            <>
+                gym6 table offsets:{' '}
+                <strong>
+                    {`0x${this.offsets[1].toString(16)}`}
+                    {', '}
+                    {`0x${this.offsets[2].toString(16)}`}
+                    {', '}
+                    {`0x${this.offsets[3].toString(16)}`}
+                </strong>{' '}
+            </>
+        );
+    };
+}
 
 function LevelColours() {
-    const [offset, setOffset] = useState(0x984c);
+    const [type, setType] = useState(new VanillaType(0x984c));
     const [level, setLevel] = useState(0);
-    const levelOffset = (level % 10) * 4;
-    const [color, setColor] = useState(0);
+    const [color, setColor] = useState(1);
     const [chosen, setChosen] = useState(undefined);
-    const [newTable, setNewTable] = useState(colorTable.slice());
+    const [newTable, setNewTable] = useState(vanillaTable.slice());
 
     let colorIndex = 0;
 
@@ -43,30 +155,25 @@ function LevelColours() {
             <h1>Universal Tetris ROM Colour Generator</h1>
 
             <p className="offset">
-                colour table offset: <strong>0x{offset.toString(16)}</strong>{' '}
+                {type.getInfo()}
                 <label htmlFor="file" className="file">
                     use custom ROM
                 </label>
                 <input
                     id="file"
                     type="file"
-                    onChange={(e) => {
-                        const reader = new FileReader();
-                        reader.readAsArrayBuffer(e.target.files[0]);
-                        reader.onloadend = () => {
-                            const rom = [...new Uint8Array(reader.result)];
-                            const offset = findOffset(rom.slice(0x10));
-                            if (offset !== -1) {
-                                setOffset(offset + 0x8000);
-                            } else {
-                                alert(
-                                    'ROM doesnt contain original colour data',
-                                );
-                            }
-                        };
-                        e.preventDefault();
-                    }}
+                    onChange={(e) => getType(e, setType)}
                 />
+            </p>
+            <p>
+                <button onClick={() => setNewTable(vanillaTable.slice())}>
+                    Reset Defaults
+                </button>
+            </p>
+            <p>
+                <button onClick={() => type.getPatch(newTable)}>
+                    Download Patch
+                </button>
             </p>
             {/*
             <select value={level} onChange={(e) => setLevel(e.target.value)}>
@@ -78,13 +185,19 @@ function LevelColours() {
             </select>
             */}
             {Array.from({ length: 10 }, (_, l) => (
-                <p key={l}>
+                <p key={l} className={level == l ? 'selectedRow' : ''}>
+                    {l}
+                    {'  '}
                     {Array.from({ length: 3 }, (_, i) => (
                         <button
                             key={i}
                             style={{
                                 backgroundColor:
                                     lookup[newTable[l * 4 + i + 1]],
+                                borderColor:
+                                    level == l && color == i + 1
+                                        ? '#DDD'
+                                        : '#777',
                             }}
                             onClick={() => {
                                 setLevel(l);
@@ -111,18 +224,14 @@ function LevelColours() {
                                 key={i}
                                 data-index={colorIndex}
                                 onClick={(e) => {
-                                    console.log(
-                                        `${level} ${color} ${
-                                            level * 4 + color
-                                        }`,
-                                    );
-                                    const newNewTable = newTable.slice();
                                     const newChosen = Number(
                                         e.target.dataset.index,
                                     );
+                                    setChosen(newChosen);
+
+                                    const newNewTable = newTable.slice();
                                     newNewTable[level * 4 + color] = newChosen;
                                     setNewTable(newNewTable);
-                                    setChosen(newChosen);
                                 }}
                             >
                                 {(colorIndex++)
@@ -135,16 +244,15 @@ function LevelColours() {
                 ))}
             {typeof chosen !== 'undefined' && (
                 <p>
-                    offset:{' '}
+                    offset:
                     <strong>
-                        0x{(offset + levelOffset + color).toString(16)}
-                    </strong>{' '}
-                    value: <strong>0x{chosen.toString(16)}</strong>
+                        0x{type.getOffset(level, color)}
+                    </strong> value: <strong>0x{chosen.toString(16)}</strong>
                 </p>
             )}
 
             {typeof chosen !== 'undefined' && (
-                <pre>{genie(offset + levelOffset + color - 0x8000, chosen)}</pre>
+                <pre>{type.getGgCode(level, color, chosen)}</pre>
             )}
         </main>
     );
