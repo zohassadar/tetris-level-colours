@@ -3,6 +3,7 @@ import { render } from 'react-dom';
 import { saveAs } from './saveas.js';
 import {
     vanillaTable,
+    prideTable,
     gym6Table1,
     gym6Table2,
     gym6Table3,
@@ -92,8 +93,8 @@ function VanillaType(offset) {
     this.getInfo = function () {
         return (
             <>
-                {this.offset == 0x984c ? 'vanilla' : 'shifted'}{' '}
-                table offset: <strong>0x{this.offset.toString(16)}</strong>{' '}
+                {this.offset == 0x984c ? 'vanilla' : 'shifted'} table offset:{' '}
+                <strong>0x{this.offset.toString(16)}</strong>{' '}
             </>
         );
     };
@@ -168,6 +169,11 @@ function LevelColours() {
             <p>
                 <button onClick={() => setNewTable(vanillaTable.slice())}>
                     Reset Defaults
+                </button>
+            </p>
+            <p>
+                <button onClick={() => setNewTable(prideTable.slice())}>
+                    Pride Colors
                 </button>
             </p>
             <p>
