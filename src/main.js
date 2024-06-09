@@ -33,7 +33,7 @@ function genie(address, value) {
     code[5] += value & 8;
     return code.map((d) => 'APZLGITYEOXUKSVN'[d]).join('');
 }
-function getType(e, setType) {
+function getType(e, setRomType) {
     e.preventDefault();
     const reader = new FileReader();
     reader.readAsArrayBuffer(e.target.files[0]);
@@ -41,7 +41,7 @@ function getType(e, setType) {
         const rom = [...new Uint8Array(reader.result)];
         const offset = findOffset(vanillaTable, rom.slice(0x10));
         if (offset !== -1) {
-            setType(new VanillaType(offset + 0x8000));
+            setRomType(new VanillaType(offset + 0x8000));
             return;
         }
 
@@ -49,7 +49,7 @@ function getType(e, setType) {
         const offset2 = findOffset(gym6Table2, rom.slice(0x10)) + 0x8000;
         const offset3 = findOffset(gym6Table3, rom.slice(0x10)) + 0x8000;
         if (offset1 !== 0x7fff && offset2 !== 0x7fff && offset3 !== 0x7fff) {
-            setType(new Gym6Type(offset1, offset2, offset3));
+            setRomType(new Gym6Type(offset1, offset2, offset3));
             return;
         }
 
@@ -143,7 +143,7 @@ function Gym6Type(offset1, offset2, offset3) {
 }
 
 function LevelColours() {
-    const [type, setType] = useState(new VanillaType(0x984c));
+    const [romType, setRomType] = useState(new VanillaType(0x984c));
     const [level, setLevel] = useState(0);
     const [color, setColor] = useState(1);
     const [chosen, setChosen] = useState(undefined);
@@ -156,14 +156,14 @@ function LevelColours() {
             <h1>Universal Tetris ROM Colour Generator</h1>
 
             <p className="offset">
-                {type.getInfo()}
+                {romType.getInfo()}
                 <label htmlFor="file" className="file">
                     use custom ROM
                 </label>
                 <input
                     id="file"
                     type="file"
-                    onChange={(e) => getType(e, setType)}
+                    onChange={(e) => getType(e, setRomType)}
                 />
             </p>
             <p>
@@ -177,7 +177,7 @@ function LevelColours() {
                 </button>
             </p>
             <p>
-                <button onClick={() => type.getPatch(newTable)}>
+                <button onClick={() => romType.getPatch(newTable)}>
                     Download Patch
                 </button>
             </p>
@@ -252,13 +252,13 @@ function LevelColours() {
                 <p>
                     offset:
                     <strong>
-                        0x{type.getOffset(level, color)}
+                        0x{romType.getOffset(level, color)}
                     </strong> value: <strong>0x{chosen.toString(16)}</strong>
                 </p>
             )}
 
             {typeof chosen !== 'undefined' && (
-                <pre>{type.getGgCode(level, color, chosen)}</pre>
+                <pre>{romType.getGgCode(level, color, chosen)}</pre>
             )}
         </main>
     );
