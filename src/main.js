@@ -33,12 +33,13 @@ function genie(address, value) {
     code[5] += value & 8;
     return code.map((d) => 'APZLGITYEOXUKSVN'[d]).join('');
 }
-function getType(e, setRomType) {
+function getType(e, setRomType, setRom) {
     e.preventDefault();
     const reader = new FileReader();
     reader.readAsArrayBuffer(e.target.files[0]);
     reader.onloadend = () => {
         const rom = [...new Uint8Array(reader.result)];
+        setRom(rom);
         const offset = findOffset(vanillaTable, rom.slice(0x10));
         if (offset !== -1) {
             setRomType(new VanillaType(offset + 0x8000));
@@ -56,7 +57,17 @@ function getType(e, setRomType) {
         alert('ROM doesnt contain original colour data');
     };
 }
-function getIPS(segments) {
+
+function applyPatch(segments, rom, filename) {
+    console.log(rom.length);
+    let buffer = new Array(...rom);
+    for (const [offset, table] of segments) {
+        buffer.splice(offset - 0x7ff0, table.length, ...table);
+    }
+    saveAs(new Blob([new Uint8Array(buffer)]), `${filename}.nes`);
+}
+
+function getIPS(segments, filename) {
     let buffer = [];
     const sendWord = (word) =>
         buffer.push(
@@ -75,7 +86,7 @@ function getIPS(segments) {
         buffer.push(...table);
     }
     sendWord('EOF');
-    saveAs(new Blob([new Uint8Array(buffer)]), 'colours.ips');
+    saveAs(new Blob([new Uint8Array(buffer)]), `${filename}.ips`);
 }
 function VanillaType(offset) {
     this.offset = offset;
@@ -83,9 +94,8 @@ function VanillaType(offset) {
     this.getGgCode = function (level, color, chosen) {
         return genie(this.offset + level * 4 + color - 0x8000, chosen);
     };
-
-    this.getPatch = function (table) {
-        getIPS([[this.offset, table]]);
+    this.getSegments = function (table) {
+        return [[this.offset, table]];
     };
     this.getOffset = function (level, color) {
         return (this.offset + level * 4 + color).toString(16);
@@ -106,8 +116,7 @@ function Gym6Type(offset1, offset2, offset3) {
     this.getGgCode = function (level, color, chosen) {
         return genie(this.offsets[color] + level - 0x8000, chosen);
     };
-
-    this.getPatch = function (table) {
+    this.getSegments = function (table) {
         let table1 = [];
         let table2 = [];
         let table3 = [];
@@ -116,13 +125,12 @@ function Gym6Type(offset1, offset2, offset3) {
             table2.push(table[i + 2]);
             table3.push(table[i + 3]);
         }
-        getIPS([
+        return [
             [this.offsets[1], table1],
             [this.offsets[2], table2],
             [this.offsets[3], table3],
-        ]);
+        ];
     };
-
     this.getOffset = function (level, color) {
         return (this.offsets[color] + level).toString(16);
     };
@@ -143,6 +151,8 @@ function Gym6Type(offset1, offset2, offset3) {
 }
 
 function LevelColours() {
+    const [rom, setRom] = useState(undefined);
+    const [filename, setFilename] = useState('custom-colors');
     const [romType, setRomType] = useState(new VanillaType(0x984c));
     const [level, setLevel] = useState(0);
     const [color, setColor] = useState(1);
@@ -163,7 +173,7 @@ function LevelColours() {
                 <input
                     id="file"
                     type="file"
-                    onChange={(e) => getType(e, setRomType)}
+                    onChange={(e) => getType(e, setRomType, setRom)}
                 />
             </p>
             <p>
@@ -174,11 +184,6 @@ function LevelColours() {
             <p>
                 <button onClick={() => setNewTable(prideTable.slice())}>
                     Pride Colors
-                </button>
-            </p>
-            <p>
-                <button onClick={() => romType.getPatch(newTable)}>
-                    Download Patch
                 </button>
             </p>
             {/*
@@ -259,6 +264,41 @@ function LevelColours() {
 
             {typeof chosen !== 'undefined' && (
                 <pre>{romType.getGgCode(level, color, chosen)}</pre>
+            )}
+            <>
+                <p>
+                    filename:
+                    <input
+                        value={filename}
+                        onChange={(e) => setFilename(e.target.value)}
+                    />
+                </p>
+                <p>
+                    Patch:
+                    <button
+                        onClick={() =>
+                            getIPS(romType.getSegments(newTable), filename)
+                        }
+                    >
+                        {`${filename}.ips`}
+                    </button>
+                </p>
+            </>
+            {typeof rom !== 'undefined' && (
+                <p>
+                    Patched:
+                    <button
+                        onClick={() =>
+                            applyPatch(
+                                romType.getSegments(newTable),
+                                rom,
+                                filename,
+                            )
+                        }
+                    >
+                        {`${filename}.nes`}
+                    </button>
+                </p>
             )}
         </main>
     );
